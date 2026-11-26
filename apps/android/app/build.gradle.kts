@@ -8,11 +8,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.fufu.quiz"
+        applicationId = "com.fufu.quiz.cat"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
         testInstrumentationRunner = "com.fufu.quiz.state.QuizRepositoryCloudRestoreSafetyInstrumentation"
         buildConfigField("boolean", "MATH_RENDERING_ENABLED", "true")
         buildConfigField("boolean", "LATEX_COMPARISON_ENABLED", "false")
@@ -26,10 +26,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("catRelease") {
+            storeFile = System.getenv("CAT_SIGNING_FILE")?.let { file(it) }
+            storePassword = System.getenv("CAT_SIGNING_PASSWORD")
+            keyAlias = "fufu-cat"
+            keyPassword = System.getenv("CAT_SIGNING_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            // Sideload-friendly single APK; CI does not need a private keystore.
-            signingConfig = signingConfigs.getByName("debug")
+            // Fail closed: never substitute a runner-generated debug key.
+            signingConfig = signingConfigs.getByName("catRelease")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -76,7 +85,7 @@ android {
 }
 
 val exportFufuApk by tasks.registering(Copy::class) {
-    val versionName = "1.1.0"
+    val versionName = "1.1.1"
     from(layout.buildDirectory.file("outputs/apk/native/release/app-native-release.apk"))
     into(layout.buildDirectory.dir("outputs/fufuquiz"))
     rename { "FUFUQuiz-v$versionName.apk" }

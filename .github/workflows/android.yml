@@ -37,20 +37,29 @@ jobs:
 
       - name: Build APK
         working-directory: apps/android
-        run: ./gradlew --no-daemon assembleNativeRelease
+        env:
+          CAT_SIGNING_B64: ${{ secrets.FUFU_CAT_SIGNING_B64 }}
+          CAT_SIGNING_PASSWORD: ${{ secrets.FUFU_CAT_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export CAT_SIGNING_FILE="$RUNNER_TEMP/cat-release.p12"
+          trap 'rm -f "$CAT_SIGNING_FILE"' EXIT
+          printf '%s' "${CAT_SIGNING_B64:?Missing signing secret}" | base64 --decode > "$CAT_SIGNING_FILE"
+          ./gradlew --no-daemon assembleNativeRelease
 
       - name: Collect APK
         run: |
           mkdir -p out
           find apps/android/app/build/outputs -name '*.apk' -print
           cp apps/android/app/build/outputs/apk/native/release/app-native-release.apk \
-             out/FUFUQuiz-v1.1.0.apk
+             out/FUFUQuiz-Cat-v1.1.1.apk
           ls -lh out
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FUFUQuiz-apk
-          path: out/FUFUQuiz-v1.1.0.apk
+          path: out/FUFUQuiz-Cat-v1.1.1.apk
           if-no-files-found: error
           retention-days: 30
