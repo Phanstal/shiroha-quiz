@@ -11,8 +11,8 @@ android {
         applicationId = "com.fufu.quiz"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "com.fufu.quiz.state.QuizRepositoryCloudRestoreSafetyInstrumentation"
         buildConfigField("boolean", "MATH_RENDERING_ENABLED", "true")
         buildConfigField("boolean", "LATEX_COMPARISON_ENABLED", "false")
@@ -76,7 +76,7 @@ android {
 }
 
 val exportFufuApk by tasks.registering(Copy::class) {
-    val versionName = "1.0.0"
+    val versionName = "1.1.0"
     from(layout.buildDirectory.file("outputs/apk/native/release/app-native-release.apk"))
     into(layout.buildDirectory.dir("outputs/fufuquiz"))
     rename { "FUFUQuiz-v$versionName.apk" }

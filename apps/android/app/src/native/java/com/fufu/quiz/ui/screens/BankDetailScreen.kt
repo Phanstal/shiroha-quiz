@@ -42,6 +42,7 @@ import com.fufu.quiz.importer.model.Question
 import com.fufu.quiz.importer.model.QuestionType
 import com.fufu.quiz.state.DEFAULT_BANK_GROUP_NAME
 import com.fufu.quiz.state.QuizRepository
+import com.fufu.quiz.state.QuizBank
 import com.fufu.quiz.ui.components.ActionPillButton
 import com.fufu.quiz.ui.components.AiAnalysisFillPanel
 import com.fufu.quiz.ui.components.EmptyStateIllustration
@@ -209,6 +210,15 @@ fun BankDetailScreen(
             }
         }
 
+        ChapterOverviewCard(
+            bank = bank,
+            onPracticeChapter = { chapter ->
+                QuizRepository.setPracticeBankScope(context, bank.id)
+                QuizRepository.setPracticeChapterFilter(context, chapter)
+                onGoPractice()
+            }
+        )
+
         GlassCard {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -258,6 +268,73 @@ fun BankDetailScreen(
                     onClick = { showDeleteBankConfirm = true }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ChapterOverviewCard(
+    bank: QuizBank,
+    onPracticeChapter: (String) -> Unit
+) {
+    val chapterCounts = remember(bank.id, bank.questions) {
+        bank.questions
+            .map { it.chapter.trim() }
+            .filter { it.isNotBlank() }
+            .groupingBy { it }
+            .eachCount()
+            .entries
+            .sortedBy { it.key }
+            .map { it.key to it.value }
+    }
+    if (chapterCounts.isEmpty()) return
+    val unchaptered = bank.questions.count { it.chapter.isBlank() }
+
+    GlassCard {
+        Text(
+            text = "章节速练",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "共 ${chapterCounts.size} 章。点章节直接进入该章练习。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            chapterCounts.forEach { (chapter, count) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = chapter,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatusChip("$count 题", selected = false)
+                    ActionPillButton(
+                        icon = Icons.Rounded.PlayArrow,
+                        text = "练这章",
+                        primary = false,
+                        modifier = Modifier.height(38.dp),
+                        onClick = { onPracticeChapter(chapter) }
+                    )
+                }
+            }
+        }
+        if (unchaptered > 0) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "另有 $unchaptered 题没有章节标记，导入时请在题目上方加一行「# 第N章 章节名」。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -142,6 +142,10 @@ fun PracticeScreen(
     val practiceScopeKey = QuizRepository.currentPracticeScopeKey()
     val practiceScopeLabel = QuizRepository.currentPracticeScopeLabel()
     val practiceScopeSummary = QuizRepository.currentPracticeScopeSummary()
+    val practiceChapterOptions = remember(practiceScopeKey, QuizRepository.banks.toList()) {
+        QuizRepository.practiceChapterOptions()
+    }
+    val practiceChapterFilter = QuizRepository.effectivePracticeChapterFilter()
     val autoNextScope = rememberCoroutineScope()
     val singleQuestionAiSessions = remember(QuizRepository.practiceOptionShuffleSeed) {
         mutableStateMapOf<String, SingleQuestionAiSessionState>()
@@ -464,6 +468,11 @@ fun PracticeScreen(
                 selectedTypes = effectiveSelectedTypes,
                 selectedQuestionCount = selectedQuestionCount.coerceAtMost(selectedAvailable.coerceAtLeast(1)),
                 selectedQuestionCountMode = selectedQuestionCountMode,
+                chapterOptions = practiceChapterOptions,
+                selectedChapter = practiceChapterFilter,
+                onSelectChapter = { chapter ->
+                    QuizRepository.setPracticeChapterFilter(context, chapter)
+                },
                 practiceOrderMode = practiceOrderMode,
                 sequentialStartMode = sequentialStartMode,
                 sequentialProgressStartNumber = sequentialProgressStartNumber,
@@ -2001,6 +2010,9 @@ private fun PracticeSetupPanel(
     selectedTypes: Set<QuestionType>,
     selectedQuestionCount: Int,
     selectedQuestionCountMode: String,
+    chapterOptions: List<String>,
+    selectedChapter: String,
+    onSelectChapter: (String) -> Unit,
     practiceOrderMode: String,
     sequentialStartMode: String,
     sequentialProgressStartNumber: Int,
@@ -2065,6 +2077,43 @@ private fun PracticeSetupPanel(
             )
         }
         Spacer(Modifier.height(12.dp))
+
+        if (chapterOptions.isNotEmpty()) {
+            Text("章节", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(7.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                ActionPillButton(
+                    icon = Icons.Rounded.PlayArrow,
+                    text = "全部章节",
+                    primary = selectedChapter.isBlank(),
+                    modifier = Modifier.height(40.dp),
+                    onClick = { onSelectChapter("") }
+                )
+                chapterOptions.forEach { chapter ->
+                    ActionPillButton(
+                        icon = Icons.Rounded.PlayArrow,
+                        text = chapter,
+                        primary = selectedChapter == chapter,
+                        modifier = Modifier.height(40.dp),
+                        onClick = { onSelectChapter(chapter) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (selectedChapter.isBlank()) {
+                    "按章节练习：选一个章节后，抽题和顺序刷题都只在该章内进行。"
+                } else {
+                    "当前只练「$selectedChapter」。"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+        }
 
         Text("练习范围", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(7.dp))

@@ -5,8 +5,14 @@ import com.fufu.quiz.importer.model.QuestionType
 data class SectionInfo(
     val title: String,
     val forcedType: QuestionType? = null,
-    val isAnswerSection: Boolean = false
-)
+    val isAnswerSection: Boolean = false,
+    /** 归一后的章节键，例如「第1章」；只有章标题才会赋值。 */
+    val chapterKey: String = "",
+    /** 章节展示名，例如「第1章 信息化发展」；小节标题为「1.1 信息与信息化」。 */
+    val chapterTitle: String = ""
+) {
+    val isChapterHeading: Boolean get() = chapterKey.isNotBlank()
+}
 
 object SectionTitleParser {
     private val chineseIndex = "[一二三四五六七八九十百]+"
@@ -33,6 +39,11 @@ object SectionTitleParser {
     private val questionPromptKeywordRegex = Regex(
         """(?:[?？]|(?:下列|以下|哪[一项种个]|哪个|哪种|哪项|不正确|不属于|正确|错误|属于|包括|主要|应当|应该|可以|能够|能否|是否|为什么|如何))"""
     )
+    /** 小节标题：1.1 信息与信息化 / 2.1.3 网络安全。 */
+    private val subsectionHeadingRegex = Regex(
+        """^\s*\d{1,3}(?:\s*[.．]\s*\d{1,3}){1,2}\s*(\S.{0,29})$"""
+    )
+    private val subsectionNumericTailRegex = Regex("""(?:元|分|米|千米|公里|个|年|月|日|%|倍|人|次|万|亿|℃|kg|km|cm|mm)$""")
 
     fun parse(rawLine: String): SectionInfo? {
         val title = rawLine.trim()
@@ -41,6 +52,19 @@ object SectionTitleParser {
 
         if (isExactAnswerSectionTitle(title)) return SectionInfo(title = title, isAnswerSection = true)
         if (looksLikeNumberedQuestionStemLine(title)) return null
+        ChapterScopeParser.parseHeading(title)?.let { heading ->
+            return SectionInfo(
+                title = heading.displayName,
+                chapterKey = heading.key,
+                chapterTitle = heading.displayName
+            )
+        }
+        subsectionHeadingRegex.find(title)?.let {
+            if (looksLikeSubsectionHeading(title)) {
+                val headingText = title.trimEnd(':', '：', '.', '、')
+                return SectionInfo(title = headingText, chapterTitle = headingText)
+            }
+        }
         if (genericSectionHeadingRegex.matches(title)) return SectionInfo(title = title)
         if (isInlineAnalysisLine(title)) return null
         if (answerSectionRegex.containsMatchIn(title) && !isInlineAnswerLine(title)) {
@@ -68,8 +92,23 @@ object SectionTitleParser {
         return null
     }
 
-    private fun looksLikeNumberedQuestionStemLine(title: String): Boolean {
-        val rest = arabicNumberedRemainderRegex.find(title)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+    /**
+     * 小节标题判定：编号后必须是标题文字，不能是题干特征（括号空位、问句、选项），
+     * 也不能以单位结尾（「1.5 米」这种是数据行，不是标题）。
+     */
+    private fun looksLikeSubsectionHeading(title: String): Boolean {
+        val rest = subsectionHeadingRegex.find(title)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        if (rest.isBlank()) return false
+        if (questionBlankMarkerRegex.containsMatchIn(rest)) return false
+        if (rest.endsWith('?') || rest.endsWith('？') || rest.endsWith('。')) return false
+        if (subsectionNumericTailRegex.containsMatchIn(rest)) return false
+        if (Regex("""^[A-Ha-h]\s*[.、．]""").containsMatchIn(rest)) return false
+        // 「1.1 下列哪个正确」这类仍按题干处理
+        if (questionPromptKeywordRegex.containsMatchIn(rest) && rest.length > 12) return false
+        return true
+    }
+
+    private fun looksLikeNumberedQuestionStemLine(title: String): Boolean {        val rest = arabicNumberedRemainderRegex.find(title)?.groupValues?.getOrNull(1)?.trim().orEmpty()
         if (rest.isBlank()) return false
         if (looksLikeArabicNumberedTypedQuestionLine(title)) return true
         if (questionBlankMarkerRegex.containsMatchIn(rest)) return true

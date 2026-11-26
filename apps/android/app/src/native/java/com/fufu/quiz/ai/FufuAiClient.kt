@@ -723,6 +723,7 @@ object FufuAiClient {
                 blankAnswers = if (type == QuestionType.BLANK) blankAnswers else emptyList(),
                 analysis = item.optString("analysis").trim(),
                 category = item.optString("category").trim(),
+                chapter = item.optString("chapter").trim(),
                 score = score,
                 subject = item.optString("subject").trim(),
                 grade = item.optString("grade").trim(),

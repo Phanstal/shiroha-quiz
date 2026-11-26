@@ -13,6 +13,7 @@ data class Question(
     val clozeItems: List<ClozeItem> = emptyList(),
     val analysis: String = "",
     val category: String = "",
+    val chapter: String = "",
     val images: List<QuestionImage> = emptyList(),
     val score: Double? = null,
     val subject: String = "",

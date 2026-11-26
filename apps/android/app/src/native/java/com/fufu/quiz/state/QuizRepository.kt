@@ -183,6 +183,7 @@ object QuizRepository {
     private const val KEY_ACTIVE_BANK_ID = "active_bank_id"
     private const val KEY_PRACTICE_SCOPE_TYPE = "practice_scope_type"
     private const val KEY_PRACTICE_SCOPE_VALUE = "practice_scope_value"
+    private const val KEY_PRACTICE_CHAPTER_FILTER = "practice_chapter_filter"
     private const val KEY_WRONG_BOOK = "wrong_book"
     private const val KEY_SLASHED_QUESTIONS = "slashed_questions"
     private const val KEY_FAVORITE_QUESTIONS = "favorite_questions"
@@ -264,6 +265,9 @@ object QuizRepository {
     var practiceScopeType by mutableStateOf(PRACTICE_SCOPE_BANK)
         private set
     var practiceScopeValue by mutableStateOf("")
+        private set
+    /** 章节练习筛选：空串表示不限章节。 */
+    var practiceChapterFilter by mutableStateOf("")
         private set
     var practiceQuestions by mutableStateOf<List<Question>>(emptyList())
         private set
@@ -534,6 +538,7 @@ object QuizRepository {
             ?: sanitizedRestoredBanks.firstOrNull()?.id
         practiceScopeType = normalizePracticeScopeType(prefs.getString(KEY_PRACTICE_SCOPE_TYPE, PRACTICE_SCOPE_BANK))
         practiceScopeValue = prefs.getString(KEY_PRACTICE_SCOPE_VALUE, activeBankId.orEmpty()).orEmpty()
+        practiceChapterFilter = prefs.getString(KEY_PRACTICE_CHAPTER_FILTER, "").orEmpty()
         ensureValidPracticeScope()
         practiceNextRequiresResult = prefs.getBoolean(KEY_PRACTICE_NEXT_REQUIRES_RESULT, false)
         rememberPracticeSettingsEnabled = prefs.getBoolean(KEY_REMEMBER_PRACTICE_SETTINGS, true)
@@ -680,6 +685,7 @@ object QuizRepository {
         activeBankId = bank.id
         practiceScopeType = PRACTICE_SCOPE_BANK
         practiceScopeValue = bank.id
+        practiceChapterFilter = ""
         resetPracticeState()
         resetExam()
         persist()
@@ -713,6 +719,7 @@ object QuizRepository {
         activeBankId = bankId
         practiceScopeType = PRACTICE_SCOPE_BANK
         practiceScopeValue = bankId
+        practiceChapterFilter = ""
         // The current practice session is a snapshot. Switching the default bank/scope
         // only affects the next session and must not discard an unfinished practice.
         resetExam()
@@ -725,6 +732,7 @@ object QuizRepository {
         if (banks.none { normalizeBankGroupName(it.groupName) == cleanGroupName }) return false
         practiceScopeType = PRACTICE_SCOPE_GROUP
         practiceScopeValue = cleanGroupName
+        practiceChapterFilter = ""
         // Keep an already-started practice unchanged; this scope is used next time.
         persist()
         return true
@@ -735,6 +743,7 @@ object QuizRepository {
         if (banks.none { it.id == bankId }) return false
         practiceScopeType = PRACTICE_SCOPE_BANK
         practiceScopeValue = bankId
+        practiceChapterFilter = ""
         // Keep an already-started practice unchanged; this scope is used next time.
         persist()
         return true
@@ -944,39 +953,50 @@ object QuizRepository {
 
     fun currentPracticeScopeKey(): String {
         ensureValidPracticeScope()
-        return if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
+        val base = if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
             "GROUP:${normalizeBankGroupName(practiceScopeValue)}"
         } else {
             "BANK:${currentPracticeScopeBank()?.id.orEmpty()}"
         }
+        val chapter = effectivePracticeChapterFilter()
+        return if (chapter.isBlank()) base else "$base#CH:$chapter"
     }
 
     fun currentPracticeScopeLabel(): String {
         ensureValidPracticeScope()
-        return if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
+        val base = if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
             normalizeBankGroupName(practiceScopeValue)
         } else {
             currentPracticeScopeBank()?.name ?: "当前题库"
         }
+        val chapter = effectivePracticeChapterFilter()
+        return if (chapter.isBlank()) base else "$base · $chapter"
     }
 
     fun currentPracticeScopeSummary(): String {
         val scopeBanks = currentPracticeScopeBanks()
-        val total = scopeBanks.sumOf { bank -> bank.questions.count { !isQuestionSlashed(bank.id, it) } }
+        val chapters = practiceChapterOptions()
+        val total = activePracticePoolSources().size
         return if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
             "${scopeBanks.size} 个题库 · $total 题"
         } else {
-            "$total 题"
+            if (chapters.isNotEmpty()) "$total 题 · ${chapters.size} 章" else "$total 题"
         }
     }
 
     fun currentPracticeScopeBanks(): List<QuizBank> {
         ensureValidPracticeScope()
+        return currentPracticeScopeBanksRaw()
+    }
+
+    /** 不做合法性校验的版本，供校验逻辑自身使用，避免递归。 */
+    private fun currentPracticeScopeBanksRaw(): List<QuizBank> {
         return if (practiceScopeType == PRACTICE_SCOPE_GROUP) {
             val cleanGroup = normalizeBankGroupName(practiceScopeValue)
             banks.filter { normalizeBankGroupName(it.groupName) == cleanGroup }
         } else {
-            listOfNotNull(currentPracticeScopeBank())
+            val scoped = banks.firstOrNull { it.id == practiceScopeValue }
+            listOfNotNull(scoped ?: activeBank())
         }
     }
 
@@ -987,9 +1007,11 @@ object QuizRepository {
 
     fun activePracticePoolSources(bank: QuizBank? = null): List<PracticeQuestionSource> {
         val scopeBanks = bank?.let(::listOf) ?: currentPracticeScopeBanks()
+        val chapterFilter = effectivePracticeChapterFilter()
         return scopeBanks.flatMap { sourceBank ->
             sourceBank.questions
                 .filterNot { isQuestionSlashed(sourceBank.id, it) }
+                .filter { chapterFilter.isBlank() || it.chapter == chapterFilter }
                 .map { question ->
                     PracticeQuestionSource(
                         bankId = sourceBank.id,
@@ -1000,6 +1022,38 @@ object QuizRepository {
                 }
         }
     }
+
+    /** 当前练习范围内的章节列表，按题库内出现顺序去重。 */
+    fun practiceChapterOptions(bank: QuizBank? = null): List<String> {
+        val scopeBanks = bank?.let(::listOf) ?: currentPracticeScopeBanks()
+        return scopeBanks
+            .flatMap { sourceBank -> sourceBank.questions.filterNot { isQuestionSlashed(sourceBank.id, it) } }
+            .map { it.chapter.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+
+    /** 生效的章节筛选：只有当章节仍存在于当前范围时才生效。 */
+    fun effectivePracticeChapterFilter(): String {
+        val clean = practiceChapterFilter.trim()
+        if (clean.isBlank()) return ""
+        val exists = currentPracticeScopeBanksRaw().any { bank ->
+            bank.questions.any { it.chapter.trim() == clean }
+        }
+        return if (exists) clean else ""
+    }
+
+    fun setPracticeChapterFilter(context: Context, chapter: String) {
+        appContext = context.applicationContext
+        val clean = chapter.trim()
+        val exists = clean.isBlank() || currentPracticeScopeBanksRaw().any { bank ->
+            bank.questions.any { it.chapter.trim() == clean }
+        }
+        practiceChapterFilter = if (exists) clean else ""
+        persist()
+    }
+
+    fun clearPracticeChapterFilter(context: Context) = setPracticeChapterFilter(context, "")
 
     fun currentPracticeQuestion(): Question? {
         val questions = activePracticeQuestions()
@@ -3347,7 +3401,7 @@ object QuizRepository {
 
     private fun validateBackupQuestion(question: JSONObject) {
         validateBackupFields(question,
-            strings = listOf("id", "number", "type", "question", "analysis", "category", "group", "volume", "subject", "grade",
+            strings = listOf("id", "number", "type", "question", "analysis", "category", "chapter", "group", "volume", "subject", "grade",
                 "difficulty", "source", "sourceFileId", "reviewStatus"),
             integers = listOf("version"), numbers = listOf("score", "aiConfidence"),
             stringArrays = listOf("knowledgePoints", "tags", "warnings"))
@@ -4121,7 +4175,8 @@ object QuizRepository {
                                             buildList { for (i in 0 until arr.length()) add(arr.optString(i)) }
                                         }.orEmpty(),
                                         blankAnswers = parseNestedStringArray(detail.optJSONArray("blankAnswers")),
-                                        category = detail.optString("category")
+                                        category = detail.optString("category"),
+                                        chapter = detail.optString("chapter")
                                     )
                                 val chosen = detail.optJSONArray("chosen")?.let { arr ->
                                     buildList { for (i in 0 until arr.length()) add(arr.optString(i)) }
@@ -5266,12 +5321,28 @@ object QuizRepository {
             val cleanGroup = normalizeBankGroupName(practiceScopeValue)
             if (banks.any { normalizeBankGroupName(it.groupName) == cleanGroup }) {
                 practiceScopeValue = cleanGroup
+                pruneInvalidChapterFilter()
                 return
             }
         } else if (banks.any { it.id == practiceScopeValue }) {
+            pruneInvalidChapterFilter()
             return
         }
         fallbackPracticeScopeToActiveBank()
+        practiceChapterFilter = ""
+    }
+
+    /** 章节筛选只对当前范围内仍存在的章节有效，范围变化后自动清空。 */
+    private fun pruneInvalidChapterFilter() {
+        val clean = practiceChapterFilter.trim()
+        if (clean.isEmpty()) {
+            if (practiceChapterFilter.isNotEmpty()) practiceChapterFilter = ""
+            return
+        }
+        val exists = currentPracticeScopeBanksRaw().any { bank ->
+            bank.questions.any { it.chapter.trim() == clean }
+        }
+        if (!exists) practiceChapterFilter = ""
     }
 
     private fun fallbackPracticeScopeToActiveBank() {
@@ -5560,6 +5631,7 @@ object QuizRepository {
             .putString(KEY_ACTIVE_BANK_ID, activeBankId)
             .putString(KEY_PRACTICE_SCOPE_TYPE, practiceScopeType)
             .putString(KEY_PRACTICE_SCOPE_VALUE, practiceScopeValue)
+            .putString(KEY_PRACTICE_CHAPTER_FILTER, practiceChapterFilter)
             .putString(KEY_WRONG_BOOK, wrongBookToJson(wrongBook))
             .putString(KEY_SLASHED_QUESTIONS, slashedQuestionsToJson(slashedQuestions))
             .putString(KEY_FAVORITE_QUESTIONS, favoriteQuestionsToJson(favoriteQuestions))
@@ -6101,6 +6173,7 @@ object QuizRepository {
                     questionJson.optString("group"),
                     questionJson.optString("volume")
                 ).firstOrNull { it.isNotBlank() }.orEmpty(),
+                chapter = questionJson.optString("chapter"),
                 images = images,
                 score = parseNullableFiniteDouble(questionJson, "score"),
                 subject = questionJson.optString("subject"),
@@ -6238,6 +6311,7 @@ object QuizRepository {
         questionJson.put("question", question.question)
         questionJson.put("analysis", question.analysis)
         questionJson.put("category", question.category)
+        if (question.chapter.isNotBlank()) questionJson.put("chapter", question.chapter)
         question.score?.takeIf { it.isFinite() }?.let { questionJson.put("score", it) }
 
         val optionsArray = JSONArray()

@@ -9,19 +9,30 @@ data class QuestionBlock(
     val category: String = "",
     val forcedType: QuestionType? = null,
     val sequence: Int = 0,
-    val numberGenerated: Boolean = false
+    val numberGenerated: Boolean = false,
+    /** 所属章节展示名，例如「第1章 信息化发展」。 */
+    val chapter: String = "",
+    /** 题目来源标签，例如「教材章节练习」「野人老师自编模拟题」。 */
+    val source: String = ""
 )
 
 object QuestionBlockSplitter {
     private data class ParsedQuestionStart(
         val number: String,
         val remainder: String,
-        val forcedType: QuestionType? = null
+        val forcedType: QuestionType? = null,
+        val source: String = ""
     )
 
     private val strictQuestionStartRegex = Regex(
         """^\s*(?:第\s*)?(\d{1,4})\s*(?:题)?\s*[.、．:：)）]\s*(.*)$"""
     )
+    /** 「试题1-」「试题 1-」「试题1」「题目1-」等试卷式题号。 */
+    private val examItemQuestionStartRegex = Regex(
+        """^\s*(?:试题|考题|题目)\s*(\d{1,4})\s*(?:题)?\s*[-－—–:.、．)）]?\s*(.*)$"""
+    )
+    /** 题号后紧跟的来源标签，例如「[教材章节练习]」。 */
+    private val leadingSourceLabelRegex = Regex("""^\s*\[\s*([^\[\]]{1,24})\s*\]\s*(.*)$""")
     private val bracketQuestionStartRegex = Regex(
         """^\s*[【\[]\s*(\d{1,4})\s*[】\]]\s*(.*)$"""
     )
@@ -98,6 +109,8 @@ object QuestionBlockSplitter {
         var currentNumberGenerated = false
         var syntheticNumber = 0
         var sequence = 0
+        var currentChapterTitle = ""
+        var currentSource = ""
         var skippingGlobalAnswerSection = false
         var skippingMaterialIntro = false
         var lastCompletedExplicitNumber: Int? = null
@@ -112,16 +125,32 @@ object QuestionBlockSplitter {
                     category = currentCategory,
                     forcedType = currentForcedType,
                     sequence = sequence++,
-                    numberGenerated = currentNumberGenerated
+                    numberGenerated = currentNumberGenerated,
+                    chapter = currentChapterTitle,
+                    source = currentSource
                 )
                 if (!currentNumberGenerated) {
                     number.substringBefore('-').toIntOrNull()?.let { lastCompletedExplicitNumber = it }
                 }
+                currentSource = ""
             }
             currentNumber = null
             currentLines = mutableListOf()
             currentForcedType = currentSectionForcedType
             currentNumberGenerated = false
+        }
+
+        /** 应用分区标题：章标题重置并记录章节，小节标题只更新分区名。 */
+        fun applySection(section: SectionInfo) {
+            flush()
+            if (section.isChapterHeading) {
+                currentChapterTitle = section.chapterTitle.ifBlank { section.chapterKey }
+            }
+            currentCategory = section.title.ifBlank { category }
+            currentSectionForcedType = section.forcedType ?: forcedType
+            currentForcedType = currentSectionForcedType
+            skippingGlobalAnswerSection = false
+            skippingMaterialIntro = false
         }
 
         val sourceLines = text.lineSequence().toList()
@@ -153,12 +182,7 @@ object QuestionBlockSplitter {
                         skippingMaterialIntro = false
                         return@forEachIndexed
                     }
-                    flush()
-                    currentCategory = section.title.ifBlank { category }
-                    currentSectionForcedType = section.forcedType ?: forcedType
-                    currentForcedType = currentSectionForcedType
-                    skippingGlobalAnswerSection = false
-                    skippingMaterialIntro = false
+                    applySection(section)
                     return@forEachIndexed
                 }
 
@@ -185,12 +209,7 @@ object QuestionBlockSplitter {
                     skippingMaterialIntro = false
                     return@forEachIndexed
                 }
-                flush()
-                currentCategory = section.title.ifBlank { category }
-                currentSectionForcedType = section.forcedType ?: forcedType
-                currentForcedType = currentSectionForcedType
-                skippingGlobalAnswerSection = false
-                skippingMaterialIntro = false
+                applySection(section)
                 return@forEachIndexed
             }
 
@@ -229,6 +248,7 @@ object QuestionBlockSplitter {
                 currentNumber = explicitStart.number
                 currentNumberGenerated = false
                 currentForcedType = explicitStart.forcedType ?: currentSectionForcedType
+                currentSource = explicitStart.source
                 currentLines = mutableListOf<String>().apply {
                     val remainder = explicitStart.remainder.trim()
                     if (remainder.isNotBlank()) add(remainder)
@@ -340,6 +360,19 @@ object QuestionBlockSplitter {
             )
         }
 
+        examItemQuestionStartRegex.find(line)?.let { match ->
+            val number = match.groupValues[1]
+            if (isInvalidQuestionNumber(number)) return null
+            val labeled = splitLeadingSourceLabel(match.groupValues[2])
+            val typed = QuestionTypeLabelParser.extractLeading(labeled.remainder)
+            return ParsedQuestionStart(
+                number = number,
+                remainder = typed?.remainder ?: labeled.remainder,
+                forcedType = typed?.type,
+                source = labeled.source
+            )
+        }
+
         interviewQuestionStartRegex.find(line)?.let { match ->
             val rawNumber = listOf(match.groupValues[1], match.groupValues[2], match.groupValues[3])
                 .firstOrNull { it.isNotBlank() }
@@ -397,8 +430,17 @@ object QuestionBlockSplitter {
         return null
     }
 
-    private fun shouldResumeAfterGlobalAnswerSection(
-        sourceLines: List<String>,
+    private data class SourceLabeledText(val remainder: String, val source: String)
+
+    /** 切出题号后的来源标签，例如「试题1-[教材章节练习]」中的「教材章节练习」。 */
+    private fun splitLeadingSourceLabel(text: String): SourceLabeledText {
+        val match = leadingSourceLabelRegex.find(text) ?: return SourceLabeledText(text, "")
+        val label = match.groupValues[1].trim()
+        if (label.isBlank()) return SourceLabeledText(text, "")
+        return SourceLabeledText(remainder = match.groupValues[2].trim(), source = label)
+    }
+
+    private fun shouldResumeAfterGlobalAnswerSection(        sourceLines: List<String>,
         lineIndex: Int,
         start: ParsedQuestionStart,
         lastCompletedExplicitNumber: Int?
@@ -674,6 +716,8 @@ object QuestionBlockSplitter {
     ): Boolean {
         if (currentLines.none { analysisLineRegex.containsMatchIn(it) }) return false
         val start = parseQuestionStart(line) ?: return false
+        // 明确写出「试题N-」或带来源标签的题号，一律视为新题，不受题干是否紧跟影响。
+        if (start.source.isNotBlank() || examItemQuestionStartRegex.containsMatchIn(line)) return false
         return !looksLikeLikelyQuestionStructure(
             sourceLines = sourceLines,
             lineIndex = lineIndex,

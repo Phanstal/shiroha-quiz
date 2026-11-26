@@ -808,6 +808,7 @@ private fun newQuestionFromAnchor(anchor: Question): Question {
         type = anchor.type,
         question = "",
         category = anchor.category,
+        chapter = anchor.chapter,
         score = anchor.score
     )
 }

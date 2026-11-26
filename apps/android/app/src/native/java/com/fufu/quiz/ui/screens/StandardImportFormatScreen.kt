@@ -68,6 +68,16 @@ private data class LocalDocSpec(
 
 private val LOCAL_IMPORT_DOCS = listOf(
     LocalDocSpec(
+        title = "章节题库模板（可直接导入）",
+        desc = "按「第N章 / N.M 节 / 试题N-」三层整理的完整示例，可用于章节练习。",
+        assetPath = "docs/章节题库模板.md"
+    ),
+    LocalDocSpec(
+        title = "章节题库写作说明",
+        desc = "章、节、题号、来源标签的写法规则与常见错误。",
+        assetPath = "docs/章节题库写作说明.md"
+    ),
+    LocalDocSpec(
         title = "标准题库格式示例",
         desc = "单选、多选、判断、填空、简答等标准写法与完整示例。",
         assetPath = "docs/standard_format.md"
@@ -144,6 +154,7 @@ fun StandardImportFormatScreen(
                     "• 选择题保留 A. B. C. D. 等选项标记。\n" +
                     "• 答案单独写成“答案：A / ABC / 正确”等形式。\n" +
                     "• 有解析时单独写“解析：……”，没有解析可以省略。\n" +
+                    "• 要按章节练习，在题目上方加一行「# 第1章 章名」。\n" +
                     "• 扫描 PDF 请从导入页使用“在线解析 PDF”。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -481,10 +492,12 @@ private fun resolveLocalDocSpec(target: String): LocalDocSpec? {
     if (target.isBlank()) return null
     val normalized = target.lowercase()
     return when {
-        "standard_format.md" in normalized || "标准题库格式示例" in target -> LOCAL_IMPORT_DOCS[0]
-        "import_format_support.md" in normalized || "题库导入格式支持说明" in target -> LOCAL_IMPORT_DOCS[1]
-        "import_strategy_guide.md" in normalized || "题库导入策略与使用指南" in target -> LOCAL_IMPORT_DOCS[2]
-        "import_parser_notes.md" in normalized || "题目导入解析方法说明" in target -> LOCAL_IMPORT_DOCS[3]
+        "章节题库模板" in target || "chapter_template" in normalized -> LOCAL_IMPORT_DOCS[0]
+        "章节题库写作说明" in target || "chapter_guide" in normalized -> LOCAL_IMPORT_DOCS[1]
+        "standard_format.md" in normalized || "标准题库格式示例" in target -> LOCAL_IMPORT_DOCS[2]
+        "import_format_support.md" in normalized || "题库导入格式支持说明" in target -> LOCAL_IMPORT_DOCS[3]
+        "import_strategy_guide.md" in normalized || "题库导入策略与使用指南" in target -> LOCAL_IMPORT_DOCS[4]
+        "import_parser_notes.md" in normalized || "题目导入解析方法说明" in target -> LOCAL_IMPORT_DOCS[5]
         else -> null
     }
 }

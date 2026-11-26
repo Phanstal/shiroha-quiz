@@ -4490,6 +4490,7 @@ private fun duplicateQuestionNumberWarnings(questions: List<Question>): List<Imp
 
 private fun duplicateQuestionNumberScopeKey(question: Question): String {
     return listOf(
+        question.chapter.trim(),
         normalizeQuestionCategoryScope(question.category),
         question.type.name,
         normalizeQuestionNumber(question.number)

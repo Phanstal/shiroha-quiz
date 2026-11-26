@@ -28,12 +28,24 @@ object QuestionTextNormalizer {
             .replace("√", "√")
             .replace("×", "×")
             .lineSequence()
-            .map { stripProfileHeaderBeforeQuestion(it.trimEnd()) }
+            .map { stripMarkdownDecorations(it.trimEnd()) }
+            .map { stripProfileHeaderBeforeQuestion(it) }
             .filterNot { isNoiseLine(it.trim()) }
             .joinToString("\n")
             .replace(Regex(""" {2,}"""), " ")
             .replace(Regex("""\n{3,}"""), "\n\n")
             .trim()
+    }
+
+    /**
+     * 去掉 Markdown 装饰：标题井号、加粗星号、行内代码反引号。
+     * 不碰下划线：填空题依赖 `___` 作为横线标记。
+     */
+    private fun stripMarkdownDecorations(line: String): String {
+        var text = line.replace(Regex("""^\s*#{1,6}\s*"""), "")
+        text = text.replace("**", "")
+        text = text.replace(Regex("""`([^`]*)`"""), "$1")
+        return text.trimEnd()
     }
 
     private fun stripProfileHeaderBeforeQuestion(line: String): String {

@@ -167,6 +167,8 @@ object StandardQuestionParser {
             blankAnswers = multiBlank.blankAnswers,
             analysis = analysisLines.joinToString("\n").trim(),
             category = block.category,
+            chapter = block.chapter,
+            source = block.source,
             warnings = multiBlank.warnings
         )
     }
