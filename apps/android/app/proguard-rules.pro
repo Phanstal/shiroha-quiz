@@ -12,8 +12,7 @@
 -keep class * extends androidx.navigation.NavArgs { *; }
 
 # App namespace — keep data models that may be serialized
--keep class com.yiqiu.shirohaquiz.state.** { <fields>; }
--keep class com.reqir.shirohaquiz.state.** { <fields>; }
+-keep class com.fufu.quiz.state.** { <fields>; }
 
 # Keep Serializable/Parcelable used by navigation
 -keepclassmembers class * implements java.io.Serializable { *; }
@@ -23,4 +22,4 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
--keep class com.yiqiu.shirohaquiz.ui.text.MathWebView$Bridge { *; }
+-keep class com.fufu.quiz.ui.text.MathWebView$Bridge { *; }

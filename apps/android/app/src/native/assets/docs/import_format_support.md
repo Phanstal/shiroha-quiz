@@ -1,6 +1,6 @@
-# Shiroha Quiz 题库导入格式支持说明
+# FUFUQuiz 题库导入格式支持说明
 
-适用范围：Shiroha Quiz 原生 Android / Compose 版题库导入解析器。
+适用范围：FUFUQuiz 原生 Android / Compose 版题库导入解析器。
 
 > 这份文档给用户看——告诉你可以用什么格式导入题库，每种格式的识别规则是怎样的。  
 > 本说明整理题目文本、题号、题型、选项、答案、解析、主观题、材料题、集中答案区、Excel 表格、普通题库 JSON、备份 JSON/ZIP 等常见导入格式的支持情况。
@@ -11,7 +11,7 @@
 
 ## 0. 核心导入原则
 
-Shiroha Quiz 的默认目标不是“尽量猜”，而是先保护标准题库的稳定导入。
+FUFUQuiz 的默认目标不是“尽量猜”，而是先保护标准题库的稳定导入。
 
 推荐理解为：
 
@@ -25,29 +25,29 @@ Shiroha Quiz 的默认目标不是“尽量猜”，而是先保护标准题库�
 
 ## 目录
 
-- [0. 核心导入原则](Shiroha_Quiz_题库导入格式支持说明.md#format-00)
-- [1. 最推荐的标准格式](Shiroha_Quiz_题库导入格式支持说明.md#format-01)
-- [2. 支持的题号格式](Shiroha_Quiz_题库导入格式支持说明.md#format-02)
-- [3. 支持的题型标记](Shiroha_Quiz_题库导入格式支持说明.md#format-03)
-- [4. 支持的章节标题](Shiroha_Quiz_题库导入格式支持说明.md#format-04)
-- [5. 支持的选项格式](Shiroha_Quiz_题库导入格式支持说明.md#format-05)
-- [6. 支持的答案标签](Shiroha_Quiz_题库导入格式支持说明.md#format-06)
-- [7. 支持的答案分隔符](Shiroha_Quiz_题库导入格式支持说明.md#format-07)
-- [8. 支持的括号答案格式](Shiroha_Quiz_题库导入格式支持说明.md#format-08)
-- [9. 支持的客观题答案值](Shiroha_Quiz_题库导入格式支持说明.md#format-09)
-- [10. 支持的解析格式](Shiroha_Quiz_题库导入格式支持说明.md#format-10)
-- [11. 支持的主观题 / 面试题格式](Shiroha_Quiz_题库导入格式支持说明.md#format-11)
-- [12. 支持的集中答案区](Shiroha_Quiz_题库导入格式支持说明.md#format-12)
-- [13. 支持的填空题格式](Shiroha_Quiz_题库导入格式支持说明.md#format-13)
-- [14. 支持的材料题格式](Shiroha_Quiz_题库导入格式支持说明.md#format-14)
-- [15. 支持的图片标记](Shiroha_Quiz_题库导入格式支持说明.md#format-15)
-- [16. 不建议或暂不稳定的格式](Shiroha_Quiz_题库导入格式支持说明.md#format-16)
-- [17. 推荐通用模板](Shiroha_Quiz_题库导入格式支持说明.md#format-17)
-- [18. 快速格式清单](Shiroha_Quiz_题库导入格式支持说明.md#format-18)
-- [19. 编写题库时的建议](Shiroha_Quiz_题库导入格式支持说明.md#format-19)
-- [20. Excel 表格导入](Shiroha_Quiz_题库导入格式支持说明.md#format-20)
-- [21. JSON 题库导入](Shiroha_Quiz_题库导入格式支持说明.md#format-21)
-- [22. 备份 JSON/ZIP 与跨端互通](Shiroha_Quiz_题库导入格式支持说明.md#format-22)
+- [0. 核心导入原则](Fufu_Quiz_题库导入格式支持说明.md#format-00)
+- [1. 最推荐的标准格式](Fufu_Quiz_题库导入格式支持说明.md#format-01)
+- [2. 支持的题号格式](Fufu_Quiz_题库导入格式支持说明.md#format-02)
+- [3. 支持的题型标记](Fufu_Quiz_题库导入格式支持说明.md#format-03)
+- [4. 支持的章节标题](Fufu_Quiz_题库导入格式支持说明.md#format-04)
+- [5. 支持的选项格式](Fufu_Quiz_题库导入格式支持说明.md#format-05)
+- [6. 支持的答案标签](Fufu_Quiz_题库导入格式支持说明.md#format-06)
+- [7. 支持的答案分隔符](Fufu_Quiz_题库导入格式支持说明.md#format-07)
+- [8. 支持的括号答案格式](Fufu_Quiz_题库导入格式支持说明.md#format-08)
+- [9. 支持的客观题答案值](Fufu_Quiz_题库导入格式支持说明.md#format-09)
+- [10. 支持的解析格式](Fufu_Quiz_题库导入格式支持说明.md#format-10)
+- [11. 支持的主观题 / 面试题格式](Fufu_Quiz_题库导入格式支持说明.md#format-11)
+- [12. 支持的集中答案区](Fufu_Quiz_题库导入格式支持说明.md#format-12)
+- [13. 支持的填空题格式](Fufu_Quiz_题库导入格式支持说明.md#format-13)
+- [14. 支持的材料题格式](Fufu_Quiz_题库导入格式支持说明.md#format-14)
+- [15. 支持的图片标记](Fufu_Quiz_题库导入格式支持说明.md#format-15)
+- [16. 不建议或暂不稳定的格式](Fufu_Quiz_题库导入格式支持说明.md#format-16)
+- [17. 推荐通用模板](Fufu_Quiz_题库导入格式支持说明.md#format-17)
+- [18. 快速格式清单](Fufu_Quiz_题库导入格式支持说明.md#format-18)
+- [19. 编写题库时的建议](Fufu_Quiz_题库导入格式支持说明.md#format-19)
+- [20. Excel 表格导入](Fufu_Quiz_题库导入格式支持说明.md#format-20)
+- [21. JSON 题库导入](Fufu_Quiz_题库导入格式支持说明.md#format-21)
+- [22. 备份 JSON/ZIP 与跨端互通](Fufu_Quiz_题库导入格式支持说明.md#format-22)
 
 ---
 
@@ -1119,7 +1119,7 @@ B. 选项二
 解析器会避开内部图片标记中的选项字母，避免误判：
 
 ```text
-[[SHIROHA_IMAGE:img_0001]]
+[[FUFU_IMAGE:img_0001]]
 ```
 
 该标记主要用于内部图片题处理流程，不建议手工编写。
@@ -1500,7 +1500,7 @@ D. 紧急制动
 
 ## 21. JSON 题库导入（v0.7.4 新增）
 
-Shiroha Quiz 原生版支持从多个 JSON 格式导入题库。
+FUFUQuiz 原生版支持从多个 JSON 格式导入题库。
 
 ### 21.1 支持格式总览
 
@@ -1509,8 +1509,8 @@ Shiroha Quiz 原生版支持从多个 JSON 格式导入题库。
 | 多题库数组   | `[{"name":"题库1","questions":[...]}]`                  | 设置/导出 → 导入配置 / 备份 JSON/ZIP |
 | 单题库对象   | `{"name":"题库","questions":[...]}`                     | 普通导入或备份导入                  |
 | 题目数组    | `[{"type":"single","question":"...","answer":["A"]}]` | 普通导入或备份导入                  |
-| Web 备份包 | `{"app":"Shiroha Quiz","banks":[...]}`                | 设置/导出 → 导入配置 / 备份 JSON/ZIP |
-| 原生备份包   | `{"kind":"shiroha_quiz","banks":[...]}`               | 设置/导出 → 导入配置 / 备份 JSON/ZIP |
+| Web 备份包 | `{"app":"FUFUQuiz","banks":[...]}`                | 设置/导出 → 导入配置 / 备份 JSON/ZIP |
+| 原生备份包   | `{"kind":"fufu_quiz","banks":[...]}`               | 设置/导出 → 导入配置 / 备份 JSON/ZIP |
 | 对象选项    | `{"options":{"A":"选项文本","B":"..."}}`                  | 任意 JSON 导入                 |
 
 ### 21.2 答案解析字段
@@ -1578,7 +1578,7 @@ Shiroha Quiz 原生版支持从多个 JSON 格式导入题库。
 
 ## 22. 备份 JSON/ZIP 与跨端互通
 
-Shiroha Quiz 自己导出的完整备份，和普通题库文本不是同一种导入对象。
+FUFUQuiz 自己导出的完整备份，和普通题库文本不是同一种导入对象。
 
 ### 22.1 推荐入口
 

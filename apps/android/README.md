@@ -1,43 +1,34 @@
-# Shiroha Quiz — Android 工程
+# FUFUQuiz — Android 工程
 
-## 双入口架构
+单版本原生 Compose 刷题应用，只构建一个 APK。
 
-通过 `productFlavors` 实现两个独立构建：
+| 项目 | 值 |
+|------|-----|
+| 应用名 | FUFUQuiz |
+| applicationId | `com.fufu.quiz` |
+| 版本 | 1.0.0 (versionCode 1) |
+| 入口 | `MainActivity`（Kotlin + Jetpack Compose + Material3） |
+| minSdk / targetSdk | 26 / 34 |
 
-| Flavor | 入口 Activity | 技术栈 | 图标 |
-|--------|-------------|--------|------|
-| `web` | WebShellActivity | WebView 加载本地 HTML/CSS/JS | `app-icon.png` |
-| `native` | MainActivity | Kotlin + Jetpack Compose + Material3 | 原生图标 |
-
-## 快速编译
+## 编译
 
 ```bash
-bash ./gradlew assembleWebDebug      # Web 壳子
-bash ./gradlew assembleNativeDebug   # 原生 Compose
+cd apps/android
+./gradlew assembleNativeRelease     # 唯一的 release APK
 ```
 
-APK 输出：`app/build/outputs/shiroha-quiz/`
+APK 输出：`app/build/outputs/fufuquiz/FUFUQuiz-v1.0.0.apk`
 
-## 原生 Compose 进度
-
-已开发 6 个页面 + 完整导入链：
-
-| 页面 | 功能 |
-|------|------|
-| HomeScreen | 题库概览、快捷入口 |
-| ImportScreen | 文件选择、解析预览 |
-| PracticeScreen | 题卡展示、答案提交 |
-| ExamScreen | 计时交卷、得分统计 |
-| BankDetailScreen | 题库题目列表 |
-| MeScreen | 个人设置 |
-
-导入模块：`parser/` (8 个解析器) → `score/` → `validate/` → `state/QuizRepository`
-
-详见 [原生开发进度](../../docs/native/原生开发进度.md)
+也可以直接用 GitHub Actions：Actions → `Build APK` → Run workflow，产物在运行页面的 Artifacts 里。
 
 ## 目录说明
 
-- `app/`：Android 应用模块
-- `app/src/main/assets/web/`：WebView 加载的 Web 资源
-- `app/src/web/res/`：Web flavor 专属图标资源
+- `app/src/main/`：清单、启动主题、通用图标
+- `app/src/native/`：Compose 界面、状态仓库、导入与解析、AI 与 WebDAV
+- `app/src/katex/`：KaTeX 公式渲染（WebView + 本地资源）
+- `app/src/testNative/`、`app/src/testKatex/`：单元测试
 - `gradle/`：Gradle Wrapper
+
+## 功能
+
+题库导入（文本 / Excel / ZIP / OCR / AI 补全）、练习、考试、错题本、收藏夹、学习记录、备份与 WebDAV 同步。

@@ -1,82 +1,37 @@
-﻿import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
-val latexComparison = providers.gradleProperty("latexComparison").orNull
-val noRatex = providers.gradleProperty("noRatex").isPresent
-require(latexComparison == null || latexComparison in setOf("ratex", "katex")) {
-    "latexComparison must be ratex or katex"
-}
-require(latexComparison == null || !noRatex) { "Do not combine latexComparison and noRatex" }
-val latexSource = latexComparison ?: if (noRatex) "lite" else "katex"
-
 android {
-    namespace = "com.yiqiu.shirohaquiz"
+    namespace = "com.fufu.quiz"
     compileSdk = 34
 
     defaultConfig {
+        applicationId = "com.fufu.quiz"
         minSdk = 26
         targetSdk = 34
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 1
+        versionName = "1.0.0"
+        testInstrumentationRunner = "com.fufu.quiz.state.QuizRepositoryCloudRestoreSafetyInstrumentation"
+        buildConfigField("boolean", "MATH_RENDERING_ENABLED", "true")
+        buildConfigField("boolean", "LATEX_COMPARISON_ENABLED", "false")
     }
 
+    // Single APK: one Native/Compose build, no web shell and no test variants.
     flavorDimensions += "variant"
-
     productFlavors {
-        create("web") {
-            dimension = "variant"
-            applicationId = "com.yiqiu.shirohaquiz"
-            versionCode = 57
-            versionName = "0.8.10-alpha"
-        }
         create("native") {
             dimension = "variant"
-            testInstrumentationRunner = "com.yiqiu.shirohaquiz.state.QuizRepositoryCloudRestoreSafetyInstrumentation"
-            applicationId = "com.reqir.shirohaquiz"
-            versionCode = if (latexComparison != null) 219 else 218
-            buildConfigField("boolean", "MATH_RENDERING_ENABLED", (latexSource != "lite").toString())
-            buildConfigField("boolean", "LATEX_COMPARISON_ENABLED", (latexComparison != null).toString())
-            versionName = when {
-                latexComparison != null -> "0.9.17-$latexComparison-test-builtin"
-                noRatex -> "0.9.17-lite"
-                else -> "0.9.17"
-            }
-            if (latexComparison != null) {
-                applicationIdSuffix = ".$latexComparison.test"
-            }
-        }
-    }
-
-    signingConfigs {
-        create("release") {
-            val props = Properties()
-            val propsFile = rootProject.file(
-                providers.gradleProperty("releaseSigningProperties").getOrElse("keystore.properties")
-            )
-            if (propsFile.exists()) {
-                props.load(propsFile.inputStream())
-                storeFile = propsFile.parentFile.resolve(props["storeFile"] as String)
-                storePassword = props["storePassword"] as String
-                keyAlias = props["keyAlias"] as String
-                keyPassword = props["keyPassword"] as String
-            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName(if (latexComparison != null) "debug" else "release")
+            // Sideload-friendly single APK; CI does not need a private keystore.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
-            // Only the RaTeX comparison package contains an Android native library.
-            if (latexSource == "ratex") {
-                ndk {
-                    abiFilters += listOf("arm64-v8a")
-                }
-            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -104,16 +59,12 @@ android {
     }
 
     sourceSets.getByName("native").apply {
-        java.srcDir("src/$latexSource/java")
-        if (latexSource == "katex") assets.srcDir("src/katex/assets")
-        if (latexComparison != null) {
-            res.srcDir("src/$latexSource/res")
-            assets.srcDir("src/latexComparison/assets")
-        }
+        java.srcDir("src/katex/java")
+        assets.srcDir("src/katex/assets")
     }
     sourceSets.getByName("testNative").apply {
         java.srcDir("src/androidTestNative/java")
-        if (latexSource == "katex") java.srcDir("src/testKatex/java")
+        java.srcDir("src/testKatex/java")
     }
     testOptions.unitTests.isIncludeAndroidResources = true
 
@@ -124,36 +75,16 @@ android {
     }
 }
 
-androidComponents {
-    if (latexComparison != null) {
-        beforeVariants(selector().withFlavor("variant" to "web")) {
-            it.enable = false
-        }
-    }
-}
-
-val exportWebReleaseApk by tasks.registering(Copy::class) {
-    val webVersionName = android.productFlavors.getByName("web").versionName
-    from(layout.buildDirectory.file("outputs/apk/web/release/app-web-release.apk"))
-    into(layout.buildDirectory.dir("outputs/shiroha-quiz"))
-    rename { "Shiroha-Quiz-v$webVersionName-web-release.apk" }
-}
-
-val exportNativeReleaseApk by tasks.registering(Copy::class) {
-    val nativeVersionName = android.productFlavors.getByName("native").versionName
+val exportFufuApk by tasks.registering(Copy::class) {
+    val versionName = "1.0.0"
     from(layout.buildDirectory.file("outputs/apk/native/release/app-native-release.apk"))
-    into(layout.buildDirectory.dir("outputs/shiroha-quiz"))
-    rename { "Shiroha-Quiz-v$nativeVersionName-native-release.apk" }
+    into(layout.buildDirectory.dir("outputs/fufuquiz"))
+    rename { "FUFUQuiz-v$versionName.apk" }
 }
 
 afterEvaluate {
-    if (latexComparison == null) {
-        tasks.named("assembleWebRelease") {
-            finalizedBy(exportWebReleaseApk)
-        }
-    }
     tasks.named("assembleNativeRelease") {
-        finalizedBy(exportNativeReleaseApk)
+        finalizedBy(exportFufuApk)
     }
 }
 
@@ -170,9 +101,6 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     add("nativeImplementation", "androidx.work:work-runtime-ktx:2.9.1")
-    if (latexSource == "ratex") {
-        add("nativeImplementation", "io.github.erweixin:ratex-android:0.1.15")
-    }
     testImplementation("junit:junit:4.13.2")
     add("testNativeImplementation", "net.sf.kxml:kxml2:2.3.0")
     add("testNativeImplementation", "org.robolectric:robolectric:4.12.2")
