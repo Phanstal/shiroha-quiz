@@ -521,6 +521,16 @@ fun BankReviewScreen(
                         singleLine = true
                     )
                 }
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = question.chapter,
+                    onValueChange = { value ->
+                        editableQuestions[safeIndex] = question.copy(chapter = value)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("章节（如 第1章 信息化发展）") },
+                    singleLine = true
+                )
                 Spacer(Modifier.height(12.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -859,6 +869,7 @@ private fun bankQuestionMatchesQuery(question: Question, query: String): Boolean
     return question.question.lowercase().contains(normalized) ||
         question.number.lowercase().contains(normalized) ||
         question.category.lowercase().contains(normalized) ||
+        question.chapter.lowercase().contains(normalized) ||
         question.answer.joinToString(" ").lowercase().contains(normalized) ||
         question.blankAnswers.flatten().joinToString(" ").lowercase().contains(normalized) ||
         question.options.any { option ->

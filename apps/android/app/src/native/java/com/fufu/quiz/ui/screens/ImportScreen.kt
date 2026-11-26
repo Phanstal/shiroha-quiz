@@ -4260,6 +4260,7 @@ private fun String.withImportWarningQuestionId(questionId: String): String {
 private fun isReplaceableLocalImportWarning(warning: ImportWarning): Boolean {
     val message = displayImportWarningMessage(warning.message)
     return message in replaceableLocalImportWarningMessages ||
+        message.startsWith("同一章节/分区/题型内题号重复") ||
         message.startsWith("同一分区/题型内题号重复") ||
         isMultiBlankLocalWarning(message)
 }
@@ -4483,7 +4484,7 @@ private fun duplicateQuestionNumberWarnings(questions: List<Question>): List<Imp
         ImportWarning(
             level = WarningLevel.WARNING,
             questionNumber = question.number,
-            message = "同一分区/题型内题号重复：建议人工确认。导入预览已按内部题目ID区分，避免仅按题号混淆。；$IMPORT_WARNING_ID_MARKER${question.id}"
+            message = "同一章节/分区/题型内题号重复：建议人工确认。导入预览已按内部题目ID区分，避免仅按题号混淆。；$IMPORT_WARNING_ID_MARKER${question.id}"
         )
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -440,8 +441,24 @@ private fun QuestionPreviewBlock(
         verticalAlignment = Alignment.CenterVertically
     ) {
         StatusChip(typeLabel(question.type))
-        if (editable) {
+        val location = listOf(question.chapter, question.category)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(" · ")
+        if (location.isNotBlank()) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = location,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
             Spacer(Modifier.weight(1f))
+        }
+        if (editable) {
             ActionPillButton(
                 icon = Icons.Rounded.Edit,
                 text = "修改",
