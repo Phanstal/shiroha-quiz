@@ -53,13 +53,13 @@ jobs:
           mkdir -p out
           find apps/android/app/build/outputs -name '*.apk' -print
           cp apps/android/app/build/outputs/apk/native/release/app-native-release.apk \
-             out/FUFUQuiz-Cat-v1.1.1.apk
+             out/FUFUQuiz-v1.1.1.apk
           ls -lh out
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FUFUQuiz-apk
-          path: out/FUFUQuiz-Cat-v1.1.1.apk
+          path: out/FUFUQuiz-v1.1.1.apk
           if-no-files-found: error
           retention-days: 30

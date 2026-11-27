@@ -8,7 +8,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.fufu.quiz.cat"
+        applicationId = "com.fufu.quiz"
         minSdk = 26
         targetSdk = 34
         versionCode = 3
